@@ -35,6 +35,10 @@
     <DocumentationFile>bin\Release\MVCGrid.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.4\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
@@ -54,6 +58,7 @@
     <Compile Include="Engine\GridEngine.cs" />
     <Compile Include="Interfaces\IMVCGridRenderingEngine.cs" />
     <Compile Include="Interfaces\IMVCGridTemplatingEngine.cs" />
+    <Compile Include="Models\BrowserNavigationMode.cs" />
     <Compile Include="Models\AuthorizationType.cs" />
     <Compile Include="Models\ColumnDefaults.cs" />
     <Compile Include="Models\ColumnVisibility.cs" />
@@ -66,6 +71,7 @@
     <Compile Include="Models\TemplateModel.cs" />
     <Compile Include="Rendering\CsvRenderingEngine.cs" />
     <Compile Include="Rendering\BootstrapRenderingEngine.cs" />
+    <Compile Include="Rendering\BootstrapVerticalRenderingEngine.cs" />
     <Compile Include="Templating\SimpleTemplatingEngine.cs" />
     <Compile Include="Utility\ConfigUtility.cs" />
     <Compile Include="Utility\GridContextUtility.cs" />
@@ -99,7 +105,9 @@
     <EmbeddedResource Include="Images\sortdown.png" />
     <EmbeddedResource Include="Images\sortup.png" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="Scripts\spin.min.js" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

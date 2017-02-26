@@ -49,7 +49,6 @@ namespace MVCGrid.Models
             Visible = columnDefaults.Visible;
             SortColumnData = columnDefaults.SortColumnData;
             AllowChangeVisibility = columnDefaults.AllowChangeVisibility;
-
         }
 
         /// <summary>
@@ -76,6 +75,11 @@ namespace MVCGrid.Models
         }
 
         /// <summary>
+        /// Text to display in Visibility List, if different from HeaderText.
+        /// </summary>
+        public string ColumnVisibilityListText { get; set; }
+
+        /// <summary>
         /// Template for formatting cell value
         /// </summary>
         public string ValueTemplate { get; set; }
@@ -94,6 +98,11 @@ namespace MVCGrid.Models
         /// Use this to return a custom css class based on data for the current cell
         /// </summary>
         public Func<T1, GridContext, string> CellCssClassExpression { get; set; }
+
+        /// <summary>
+        /// Use this to return a custom css class for the current cell
+        /// </summary>
+        public string CellCssClass { get; set; }
 
         /// <summary>
         /// Enables sorting on this column

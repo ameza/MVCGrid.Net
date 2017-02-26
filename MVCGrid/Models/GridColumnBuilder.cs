@@ -102,6 +102,14 @@ namespace MVCGrid.Models
             return this;
         }
 
+        /// <summary>
+        /// Text to display in Visibility List, if different from HeaderText.
+        /// </summary>
+        public GridColumnBuilder<T1> WithColumnVisibilityText(string text)
+        {
+            GridColumn.ColumnVisibilityListText = text;
+            return this;
+        }
 
         /// <summary>
         /// Enables sorting on this column
@@ -173,6 +181,15 @@ namespace MVCGrid.Models
         public GridColumnBuilder<T1> WithCellCssClassExpression(Func<T1, string> expression)
         {
             GridColumn.CellCssClassExpression = (T1, GridContext) => expression(T1);
+            return this;
+        }
+
+        /// <summary>
+        /// Use this to return a custom css class for the current cell
+        /// </summary>
+        public GridColumnBuilder<T1> WithCellCssClass(string cssClass)
+        {
+            GridColumn.CellCssClass = cssClass;
             return this;
         }
 
