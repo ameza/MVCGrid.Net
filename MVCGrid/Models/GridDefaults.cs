@@ -34,9 +34,17 @@ namespace MVCGrid.Models
             AllowChangingPageSize = false;
             MaxItemsPerPage = null;
             AuthorizationType = Models.AuthorizationType.AllowAnonymous;
+            BrowserNavigationMode = Models.BrowserNavigationMode.PreserveAllGridActions;
+            PersistLastState = false;
+            SpinnerEnabled = true;
+            SpinnerRadius = 15;
+            EnableRowSelect = false;
+            ClientSideRowSelectFunctionName = null;
+            ClientSideRowSelectProperties = new List<string>();
 
             RenderingEngines = new ProviderSettingsCollection();
             RenderingEngines.Add(new ProviderSettings("BootstrapRenderingEngine", "MVCGrid.Rendering.BootstrapRenderingEngine, MVCGrid"));
+            RenderingEngines.Add(new ProviderSettings("BootstrapVerticalRenderingEngine", "MVCGrid.Rendering.BootstrapVerticalRenderingEngine, MVCGrid"));
             RenderingEngines.Add(new ProviderSettings("Export", "MVCGrid.Rendering.CsvRenderingEngine, MVCGrid"));
             DefaultRenderingEngineName = "BootstrapRenderingEngine";
         }
@@ -104,7 +112,17 @@ namespace MVCGrid.Models
 
         public AuthorizationType AuthorizationType { get; set; }
 
+        public BrowserNavigationMode BrowserNavigationMode { get; set; }
+
+        public bool PersistLastState { get; set; }
+
         public ProviderSettingsCollection RenderingEngines { get; set; }
         public string DefaultRenderingEngineName { get; set; }
+        public bool SpinnerEnabled { get; set; }
+        public string SpinnerTargetElementId { get; set; }
+        public int SpinnerRadius { get; set; }
+        public bool EnableRowSelect { get; set; }
+        public string ClientSideRowSelectFunctionName { get; set; }
+        public List<string> ClientSideRowSelectProperties { get; set; }
     }
 }

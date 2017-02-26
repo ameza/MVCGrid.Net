@@ -128,6 +128,15 @@ namespace MVCGrid.Interfaces
         /// </summary>
         AuthorizationType AuthorizationType { get; set; }
 
+        /// <summary>
+        /// Sets the browser navigation mode for the grid.  PreserveAllGridActions is the default.
+        /// </summary>
+        BrowserNavigationMode BrowserNavigationMode { get; set; }
+
+        /// <summary>
+        /// Perists the latest grid state in a cookie so that it will be reloaded the next time the user navigates to the page. Default is false.
+        /// </summary>
+        bool PersistLastState { get; set; }
 
         /// <summary>
         /// The list of configured rendering engines availble for this grid
@@ -144,5 +153,35 @@ namespace MVCGrid.Interfaces
         /// The default name of the rendering engine.
         /// </value>
         string DefaultRenderingEngineName { get; set; }
+
+        /// <summary>
+        /// Enables or disables spinner for the grid
+        /// </summary>
+        bool SpinnerEnabled { get; set; }
+
+        /// <summary>
+        /// The target DOM element ID for the spinner
+        /// </summary>
+        string SpinnerTargetElementId { get; set; }
+
+        /// <summary>
+        /// Sets the size of the spinner
+        /// </summary>
+        int SpinnerRadius { get; set; }
+
+        /// <summary>
+        /// Enables the ability to select by row
+        /// </summary>
+        bool EnableRowSelect { get; set; }
+
+        /// <summary>
+        /// Client side function to call when a row is selected
+        /// </summary>
+        string ClientSideRowSelectFunctionName { get; set; }
+
+        /// <summary>
+        /// Arguments to pass to the client side row select function
+        /// </summary>
+        List<string> ClientSideRowSelectProperties { get; set; }
     }
 }

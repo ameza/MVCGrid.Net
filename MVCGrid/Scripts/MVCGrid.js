@@ -6,6 +6,29 @@ var MVCGrid = new function () {
     var showErrorDetails = %%ERRORDETAILS%%;
     var currentGrids = [];
 
+    var spinnerOptions = {
+        lines: 15
+        , length: 0
+        , width: 5
+        , radius: 15
+        , scale: 1
+        , corners: 1
+        , color: '#000'
+        , opacity: 0
+        , rotate: 0
+        , direction: 1
+        , speed: 1.3
+        , trail: 75
+        , fps: 20
+        , zIndex: 2e9
+        , className: 'spinner'
+        , top: '50%'
+        , left: '50%'
+        , shadow: false
+        , hwaccel: false
+        , position: 'relative'
+    }
+
     // public
     this.init = function () {
         $('.MVCGridContainer').each(function () {
@@ -21,13 +44,23 @@ var MVCGrid = new function () {
 
         for (var i = 0; i < currentGrids.length; i++) {
             var obj = currentGrids[i];
+            var gridDef = findGridDef(obj.name);
+            var persistedUrl = "";
+            
+            if (gridDef.persistLastState === 'true') {
+                persistedUrl = MVCGrid.getPersistedUrl(obj.name);
+            }
+            
+            if (persistedUrl) {
+                setURLAndReload(obj.name, persistedUrl, bindToolbarEvents);
 
-            if (!obj.preloaded) {
-                MVCGrid.reloadGrid(obj.name);
+            } else if (!obj.preloaded) {
+                MVCGrid.reloadGrid(obj.name, bindToolbarEvents);
+
+            } else {
+                bindToolbarEvents();
             }
         }
-
-        bindToolbarEvents();
     };
 
     var applyBoundFilters = function (mvcGridName){
@@ -156,10 +189,11 @@ var MVCGrid = new function () {
 
             var colVis = MVCGrid.getColumnVisibility(gridName);
             $.each(colVis, function (colName, col) {
-                
+
                 if (!col.visible && !col.allow) {
                     return true;
                 }
+
                 var html = '<li><a><label><input type="checkbox" name="' + gridName + 'cols" value="' + colName + '"';
                 if (col.visible) {
                     html += ' checked';
@@ -174,11 +208,17 @@ var MVCGrid = new function () {
             $("input:checkbox[name='" + gridName + "cols']").change(function() {
                 var jsonData = {};
                 var gridName = getGridName($(this).closest('ul'));
-                
-                $("input:checkbox[name='" + gridName + "cols']:checked").each(function () {
-                    var columnName = $(this).val();
-                    jsonData[columnName] = true;
+
+                var colVis = MVCGrid.getColumnVisibility(gridName);
+                $.each(colVis, function(colName, col) {
+                    var isChecked = $("input:checkbox[name='" + gridName + "cols'][value='" + colName + "']:checked").length > 0;
+                    if (isChecked || (!col.allow && col.visible)) {
+                        jsonData[colName] = true;
+                    } else {
+                        jsonData[colName] = false;
+                    }
                 });
+
                 MVCGrid.setColumnVisibility(gridName, jsonData);
             });
         });
@@ -214,6 +254,7 @@ var MVCGrid = new function () {
     // private
     var updateURLParameter = function (url, param, paramVal) {
 
+   
         paramVal = encodeURIComponent(paramVal);
 
         param = param.toLowerCase();
@@ -383,11 +424,21 @@ var MVCGrid = new function () {
     };
 
     // private
-    var setURLAndReload = function (mvcGridName, newUrl) {
+    var setURLAndReload = function (mvcGridName, newUrl, callback) {
 
-        if (history.pushState) {
+        var gridDef = findGridDef(mvcGridName);
+
+        if (gridDef.persistLastState === 'true') {
+            MVCGrid.persistUrl(mvcGridName, newUrl, 3);
+        }
+        
+        if (gridDef.browserNavigationMode === 'preserveallgridactions' && history.pushState) {
             window.history.pushState({ path: newUrl }, '', newUrl);
-            MVCGrid.reloadGrid(mvcGridName);
+            MVCGrid.reloadGrid(mvcGridName, callback);
+
+        } else if (history.replaceState) {
+            window.history.replaceState({ path: newUrl }, '', newUrl);
+            MVCGrid.reloadGrid(mvcGridName, callback);
         }
         else {
             location.href = newUrl;
@@ -396,26 +447,27 @@ var MVCGrid = new function () {
     };
 
     // public
-    this.reloadGrid = function(mvcGridName){
+    this.reloadGrid = function(mvcGridName, callback){
         var tableHolderHtmlId = 'MVCGridTableHolder_' + mvcGridName;
-        var loadingHtmlId = 'MVCGrid_Loading_' + mvcGridName;
         var errorHtmlId = 'MVCGrid_ErrorMessage_' + mvcGridName;
 
-        var gridDef = findGridDef(mvcGridName);;
+        var gridDef = findGridDef(mvcGridName);
 
         var ajaxBaseUrl = handlerPath;
 
         if (gridDef.renderingMode == 'controller') {
             ajaxBaseUrl = controllerPath;
         }
-
-
+        
         var fullAjaxUrl = ajaxBaseUrl + location.search;
 
         $.each(gridDef.pageParameters, function (k, v) {
             var thisPP = "_pp_" + gridDef.qsPrefix + k;
             fullAjaxUrl = updateURLParameter(fullAjaxUrl, thisPP, v);
         });
+
+        var spinner;
+        var spinnerEnabled = gridDef.spinnerEnabled && gridDef.spinnerEnabled === 'true';
 
         $.ajax({
             type: "GET",
@@ -426,8 +478,18 @@ var MVCGrid = new function () {
                 if (gridDef.clientLoading != '') {
                     window[gridDef.clientLoading]();
                 }
-                
-                $('#' + loadingHtmlId).css("visibility", "visible");
+
+                // show spinner
+                if (spinnerEnabled) {
+                    var targetId = gridDef.spinnerTargetElementId && gridDef.spinnerTargetElementId.length > 0
+                        ? gridDef.spinnerTargetElementId
+                        : 'MVCGridContainer_' + mvcGridName;
+
+                    if ($('#' + targetId).length > 0) {
+                        spinnerOptions.radius = gridDef.spinnerRadius;
+                        spinner = new Spinner(spinnerOptions).spin($('#' + targetId)[0]);
+                    }
+                }
             },
             success: function (result) {
                 $('#' + tableHolderHtmlId).html(result);
@@ -442,11 +504,19 @@ var MVCGrid = new function () {
                 }
             },
             complete: function() {
+                // hide spinner
+                if (spinnerEnabled && spinner) {
+                    spinner.stop();
+                }
+
+                if (callback && typeof callback === 'function') {
+                    callback();
+                }
+
+                // assumes callback is synchronous
                 if (gridDef.clientLoadingComplete != '') {
                     window[gridDef.clientLoadingComplete]();
                 }
-
-                $('#' + loadingHtmlId).css("visibility", "hidden");
             }
         });
     };
@@ -473,9 +543,88 @@ var MVCGrid = new function () {
 
         return fullExportUrl;
     };
+
+    // public
+    this.persistUrl = function (mvcGridName, persistedUrl, daysToPersist) {
+        var nameEQ = "gridState_" + mvcGridName + "=";
+        var expires = "";
+
+        if (daysToPersist) {
+            var date = new Date();
+            date.setTime(date.getTime() + (daysToPersist * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toGMTString();
+        }
+
+        document.cookie = nameEQ + persistedUrl + expires + "; path=/";
+    }
+
+    // public
+    this.getPersistedUrl = function(mvcGridName) {
+        var nameEQ = "gridState_" + mvcGridName + "=";
+        var ca = document.cookie.split(';');
+        for (var i = 0; i < ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+
+    // public
+    this.setQueryStringAndReloadGrid = function (mvcGridName, newUrl, callback) {
+        MVCGrid.persistUrl("gridState_" + mvcGridName, "", -1);
+
+        // reset bound filters
+        $("[data-mvcgrid-type='filter']").each(function () {
+            var preserve = $(this).attr('data-preserve');
+            if (preserve)
+                return;
+            
+            var gridName = getGridName($(this));
+            if (gridName == mvcGridName) {
+                $(this).val('');
+            }
+        });
+
+        // reset additional options
+        $("[data-mvcgrid-type='additionalQueryOption']").each(function () {
+            var preserve = $(this).attr('data-preserve');
+            if (preserve)
+                return;
+            
+            var gridName = getGridName($(this));
+            if (gridName == mvcGridName) {
+                $(this).val('');
+            }
+        });
+
+        setURLAndReload(mvcGridName, newUrl, callback);
+    }
 };
 
 
 $(function () {
     MVCGrid.init();
+    
+    $('body').on('click', '.row-select a, .row-select input, .row-select button, .row-select glyphicon', function() {
+        e.stopPropagation();
+    });
+
+    $('body').on('click', '.row-select', function() {
+        var callback = $(this).data('row-select-callback');
+        var method = window;
+        method = method[callback];
+
+        var data;
+        var rowSelectId = $(this).data('row-select-id');
+        if ($('#' + rowSelectId).length > 0) {
+            data = $('#' + rowSelectId).text();
+        }
+
+        if (data) {
+            method(JSON.parse(data));
+        } else {
+            method();
+        }
+    });
 });

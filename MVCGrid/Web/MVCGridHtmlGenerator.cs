@@ -15,8 +15,6 @@ namespace MVCGrid.Web
     //Show/hide fields
     internal class MVCGridHtmlGenerator
     {
-        private const string RenderLoadingDivSettingName = "RenderLoadingDiv";
-
         internal static string GenerateClientDataTransferHtml(GridContext gridContext)
         {
             StringBuilder sb = new StringBuilder();
@@ -67,24 +65,29 @@ namespace MVCGrid.Web
 
             StringBuilder sb = new StringBuilder();
 
-            foreach (var cv in gridContext.QueryOptions.ColumnVisibility)
+            foreach (var gridColumn in gridColumns)
             {
-                var gridColumn = gridColumns.SingleOrDefault(p => p.ColumnName == cv.ColumnName);
+                var cv = gridContext.QueryOptions.ColumnVisibility.SingleOrDefault(p => p.ColumnName == gridColumn.ColumnName);
 
                 if (sb.Length > 0)
                 {
                     sb.Append(",");
                 }
 
-                sb.AppendFormat("\"{0}\": {{", cv.ColumnName);
+                sb.AppendFormat("\"{0}\": {{", gridColumn.ColumnName);
 
-                sb.AppendFormat("\"{0}\": \"{1}\"", "headerText", HttpUtility.JavaScriptStringEncode(gridColumn.HeaderText));
+                sb.AppendFormat("\"{0}\": \"{1}\"", "headerText",
+                    HttpUtility.JavaScriptStringEncode(String.IsNullOrEmpty(gridColumn.ColumnVisibilityListText)
+                        ? gridColumn.HeaderText
+                        : gridColumn.ColumnVisibilityListText));
+
                 sb.Append(",");
                 sb.AppendFormat("\"{0}\": {1}", "visible", cv.Visible.ToString().ToLower());
                 sb.Append(",");
                 sb.AppendFormat("\"{0}\": {1}", "allow", gridColumn.AllowChangeVisibility.ToString().ToLower());
                 sb.Append("}");
             }
+
             return sb.ToString();
         }
 
@@ -153,16 +156,6 @@ namespace MVCGrid.Web
             }
             sbHtml.Append("</div>");
 
-            bool renderLoadingDiv = def.GetAdditionalSetting<bool>(RenderLoadingDivSettingName, true);
-
-            if (renderLoadingDiv)
-            {
-                sbHtml.AppendFormat("<div id='MVCGrid_Loading_{0}' class='text-center' style='visibility: hidden'>", gridName);
-                sbHtml.AppendFormat("&nbsp;&nbsp;&nbsp;<img src='{0}/ajaxloader.gif' alt='Processing' style='width: 15px; height: 15px;' />", HtmlUtility.GetHandlerPath());
-                sbHtml.Append("Processing...");
-                sbHtml.Append("</div>");
-            }
-
             sbHtml.AppendFormat("<div id='{0}'>", HtmlUtility.GetTableHolderHtmlId(gridName));
             sbHtml.Append("%%PRELOAD%%");
             sbHtml.Append("</div>");
@@ -224,6 +217,27 @@ namespace MVCGrid.Web
 
             sbJson.Append(",");
             sbJson.AppendFormat("\"renderingMode\": \"{0}\"", def.RenderingMode.ToString().ToLower());
+
+            sbJson.Append(",");
+            sbJson.AppendFormat("\"browserNavigationMode\": \"{0}\"", def.BrowserNavigationMode.ToString().ToLower());
+
+            sbJson.Append(",");
+            sbJson.AppendFormat("\"persistLastState\": \"{0}\"", def.PersistLastState.ToString().ToLower());
+
+            sbJson.Append(",");
+            sbJson.AppendFormat("\"spinnerEnabled\": \"{0}\"", def.SpinnerEnabled.ToString().ToLower());
+
+            sbJson.Append(",");
+            sbJson.AppendFormat("\"spinnerTargetElementId\": \"{0}\"", def.SpinnerTargetElementId);
+
+            sbJson.Append(",");
+            sbJson.AppendFormat("\"spinnerRadius\": \"{0}\"", def.SpinnerRadius);
+
+            sbJson.Append(",");
+            sbJson.AppendFormat("\"enableRowSelect\": \"{0}\"", def.EnableRowSelect.ToString().ToLowerInvariant());
+
+            sbJson.Append(",");
+            sbJson.AppendFormat("\"clientRowSelect\": \"{0}\"", def.ClientSideRowSelectFunctionName);
 
             sbJson.Append(",");
             sbJson.Append("\"pageParameters\": {");

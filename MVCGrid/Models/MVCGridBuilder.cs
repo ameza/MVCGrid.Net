@@ -99,6 +99,15 @@ namespace MVCGrid.Models
         }
 
         /// <summary>
+        /// Use this to specify a custom css class for the current row
+        /// </summary>
+        public MVCGridBuilder<T1> WithRowCssClass(string cssClass)
+        {
+            GridDefinition.RowCssClass = cssClass;
+            return this;
+        }
+
+        /// <summary>
         /// A prefix to add to all query string parameters for this grid, for when there are more than 1 grids on the same page
         /// </summary>
         public MVCGridBuilder<T1> WithQueryStringPrefix(string prefix)
@@ -427,6 +436,76 @@ namespace MVCGrid.Models
         public MVCGridBuilder<T1> WithAuthorizationType(AuthorizationType authType)
         {
             GridDefinition.AuthorizationType = authType;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the browser navigation mode for the grid.  PreserveAllGridActions is the default.
+        /// </summary>
+        /// <param name="mode">browser navigation mode</param>
+        /// <param name="persistLastState">Perists the latest grid state in a cookie so that it will be reloaded the next time the user navigates to the page</param>
+        /// <returns></returns>
+        public MVCGridBuilder<T1> WithBrowserNavigationMode(BrowserNavigationMode mode, bool persistLastState = false)
+        {
+            GridDefinition.BrowserNavigationMode = mode;
+            GridDefinition.PersistLastState = persistLastState;
+            return this;
+        }
+
+        /// <summary>
+        /// Enables or disables the spinner for the grid.
+        /// </summary>
+        /// <param name="spinnerEnabled">Spinner enabled state</param>
+        /// <returns></returns>
+        public MVCGridBuilder<T1> WithSpinnerEnabled(bool spinnerEnabled)
+        {
+            GridDefinition.SpinnerEnabled = spinnerEnabled;
+            return this;
+        }
+
+        /// <summary>
+        /// Places the spinner in the target element.  If not specified, it will place the spinner over the grid
+        /// </summary>
+        /// <param name="spinnerTargetElementId">Spinner enabled state</param>
+        /// <returns></returns>
+        public MVCGridBuilder<T1> WithSpinnerTargetElementId(string spinnerTargetElementId)
+        {
+            GridDefinition.SpinnerTargetElementId = spinnerTargetElementId;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the size of the spinner
+        /// </summary>
+        /// <param name="spinnerRadius">Radius of spinner in pixels</param>
+        /// <returns></returns>
+        public MVCGridBuilder<T1> WithSpinnerRadius(int spinnerRadius)
+        {
+            GridDefinition.SpinnerRadius = spinnerRadius;
+            return this;
+        }
+
+        /// <summary>
+        /// Enables the ability to select by row
+        /// </summary>
+        /// <param name="enableRowSelect">enabled state</param>
+        /// <returns></returns>
+        public MVCGridBuilder<T1> WithEnableRowSelect(bool enableRowSelect)
+        {
+            GridDefinition.EnableRowSelect = enableRowSelect;
+            return this;
+        }
+
+        /// <summary>
+        /// Client side function to call when a row is selected
+        /// </summary>
+        /// <param name="clientSideRowSelectFunctionName">name of the javascript function to call when a row is selected</param>
+        /// <param name="propertyNames">Property name(s) of your Grid's type to pass as arguments to client function</param>
+        /// <returns></returns>
+        public MVCGridBuilder<T1> WithClientSideRowSelectFunctionName(string clientSideRowSelectFunctionName, params string[] propertyNames)
+        {
+            GridDefinition.ClientSideRowSelectFunctionName = clientSideRowSelectFunctionName;
+            GridDefinition.ClientSideRowSelectProperties = propertyNames == null ? new List<string>() : propertyNames.ToList();
             return this;
         }
     }

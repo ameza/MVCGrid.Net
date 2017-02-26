@@ -1,4 +1,6 @@
-﻿using MVCGrid.Interfaces;
+﻿using System.IO;
+using System.Reflection;
+using MVCGrid.Interfaces;
 using MVCGrid.Models;
 using System;
 using System.Collections.Generic;
@@ -6,6 +8,7 @@ using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace MVCGrid.Models
 {
@@ -52,9 +55,15 @@ namespace MVCGrid.Models
             this.AllowChangingPageSize = gridDefaults.AllowChangingPageSize;
             this.MaxItemsPerPage = gridDefaults.MaxItemsPerPage;
             this.AuthorizationType = gridDefaults.AuthorizationType;
+            this.BrowserNavigationMode = gridDefaults.BrowserNavigationMode;
 
             this.RenderingEngines = gridDefaults.RenderingEngines;
             this.DefaultRenderingEngineName = gridDefaults.DefaultRenderingEngineName;
+            this.SpinnerEnabled = gridDefaults.SpinnerEnabled;
+            this.SpinnerRadius = gridDefaults.SpinnerRadius;
+            this.EnableRowSelect = gridDefaults.EnableRowSelect;
+            this.ClientSideRowSelectFunctionName = gridDefaults.ClientSideRowSelectFunctionName;
+            this.ClientSideRowSelectProperties = gridDefaults.ClientSideRowSelectProperties;
         }
 
         [Obsolete("RenderingEngine is obsolete. Please user RenderingEngines and DefaultRenderingEngineName")]
@@ -124,9 +133,14 @@ namespace MVCGrid.Models
         /// </summary>
         public Func<T1, GridContext, string> RowCssClassExpression { get; set; }
 
+        /// <summary>
+        /// Use this to specify a custom css class for the current row
+        /// </summary>
+        public string RowCssClass { get; set; }
+
         internal override List<Row> GetData(GridContext context, out int? totalRecords)
         {
-            List<Row> resultRows = new List<Row>();
+            var resultRows = new List<Row>();
 
             var queryResult = RetrieveData(context);
             totalRecords = queryResult.TotalRecords;
@@ -136,24 +150,37 @@ namespace MVCGrid.Models
                 throw new Exception("When paging is enabled, QueryResult must contain the TotalRecords");
             }
 
-            IMVCGridTemplatingEngine templatingEngine = (IMVCGridTemplatingEngine)Activator.CreateInstance(context.GridDefinition.TemplatingEngine, true);
+            var templatingEngine = (IMVCGridTemplatingEngine)Activator.CreateInstance(context.GridDefinition.TemplatingEngine, true);
+            var rowSelectProperties = GetRowSelectProperties(context);
 
             foreach (var item in queryResult.Items)
             {
-                Row thisRow = new Row();
+                var thisRow = new Row
+                {
+                    CalculatedCssClass = String.Empty,
+                    RowSelectEventParameters = rowSelectProperties != null ? GetEventParameters(rowSelectProperties, item) : null
+                };
+
+                if (!String.IsNullOrEmpty(RowCssClass))
+                {
+                    thisRow.CalculatedCssClass = RowCssClass.Trim();
+                }
 
                 if (RowCssClassExpression != null)
                 {
                     string rowCss = RowCssClassExpression(item, context);
                     if (!String.IsNullOrWhiteSpace(rowCss))
                     {
-                        thisRow.CalculatedCssClass = rowCss;
+                        thisRow.CalculatedCssClass = String.Join(" ", thisRow.CalculatedCssClass, rowCss.Trim());
                     }
                 }
 
                 foreach (var col in this.Columns)
                 {
-                    Cell thisCell = new Cell();
+                    Cell thisCell = new Cell
+                    {
+                        CalculatedCssClass = String.Empty
+                    };
                     thisRow.Cells.Add(col.ColumnName, thisCell);
 
                     thisCell.HtmlText = "";
@@ -188,12 +215,17 @@ namespace MVCGrid.Models
                         thisCell.PlainText = col.PlainTextValueExpression(item, context);
                     }
 
+                    if (!String.IsNullOrEmpty(col.CellCssClass))
+                    {
+                        thisCell.CalculatedCssClass = col.CellCssClass.Trim();
+                    }
+
                     if (col.CellCssClassExpression != null)
                     {
                         string cellCss = col.CellCssClassExpression(item, context);
                         if (!String.IsNullOrWhiteSpace(cellCss))
                         {
-                            thisCell.CalculatedCssClass = cellCss;
+                            thisCell.CalculatedCssClass = String.Join(" ", thisCell.CalculatedCssClass, cellCss.Trim());
                         }
                     }
                 }
@@ -202,6 +234,45 @@ namespace MVCGrid.Models
             }
 
             return resultRows;
+        }
+
+        private IEnumerable<PropertyInfo> GetRowSelectProperties(GridContext context)
+        {
+            IEnumerable<PropertyInfo> properties = null;
+            if (context.GridDefinition.EnableRowSelect && context.GridDefinition.ClientSideRowSelectProperties != null &&
+                context.GridDefinition.ClientSideRowSelectProperties.Any())
+            {
+                var objectType = typeof(T1);
+                properties = objectType.GetProperties()
+                    .Where(x => x.CanRead && context.GridDefinition.ClientSideRowSelectProperties.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+            }
+
+            return properties;
+        }
+
+        private string GetEventParameters(IEnumerable<PropertyInfo> properties, T1 item)
+        {
+            if (properties == null || !properties.Any())
+                return String.Empty;
+
+            var sb = new StringBuilder();
+            var sw = new StringWriter(sb);
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.Formatting = Formatting.None;
+                writer.StringEscapeHandling = StringEscapeHandling.EscapeNonAscii;
+                writer.WriteStartObject();
+                foreach (var property in properties)
+                {
+                    var propertyValue = property.GetValue(item, null);
+
+                    writer.WritePropertyName(property.Name);
+                    writer.WriteValue(propertyValue ?? String.Empty);
+                }
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>
@@ -330,8 +401,48 @@ namespace MVCGrid.Models
         /// </summary>
         public AuthorizationType AuthorizationType { get; set; }
 
+        /// <summary>
+        /// Sets the browser navigation mode for the grid.  PreserveAllGridActions is the default.
+        /// </summary>
+        public BrowserNavigationMode BrowserNavigationMode { get; set; }
+
+        /// <summary>
+        /// Perists the latest grid state in a cookie so that it will be reloaded the next time the user navigates to the page. Default is false.
+        /// </summary>
+        public bool PersistLastState { get; set; }
+
         public ProviderSettingsCollection RenderingEngines { get; set; }
         public string DefaultRenderingEngineName { get; set; }
+
+        /// <summary>
+        /// Enables or disables spinner for the grid
+        /// </summary>
+        public bool SpinnerEnabled { get; set; }
+
+        /// <summary>
+        /// The target DOM element ID for the spinner
+        /// </summary>
+        public string SpinnerTargetElementId { get; set; }
+
+        /// <summary>
+        /// Sets the size of the spinner
+        /// </summary>
+        public int SpinnerRadius { get; set; }
+
+        /// <summary>
+        /// Enables the ability to select by row
+        /// </summary>
+        public bool EnableRowSelect { get; set; }
+
+        /// <summary>
+        /// Client side function to call when a row is selected
+        /// </summary>
+        public string ClientSideRowSelectFunctionName { get; set; }
+
+        /// <summary>
+        /// Arguments to pass to the client side row select function
+        /// </summary>
+        public List<string> ClientSideRowSelectProperties { get; set; }
     }
 
 }
